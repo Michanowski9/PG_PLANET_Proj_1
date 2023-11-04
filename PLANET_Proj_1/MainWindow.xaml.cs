@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace PLANET_Proj_1
@@ -32,11 +33,12 @@ namespace PLANET_Proj_1
         // variables
         List<bool[,]> moves = new List<bool[,]>();
         Rectangle[,] arena = null;
+        DispatcherTimer timer = new DispatcherTimer();
+        
         const int WIDTH = FIELD_SIZE;
         const int HEIGHT = FIELD_SIZE;
 
         int currentFrame = 0;
-
         int arenaSizeX = 0;
         int arenaSizeY = 0;
 
@@ -78,7 +80,11 @@ namespace PLANET_Proj_1
 
             CreateFields();
             CreateArena.IsEnabled = false;
-            NextFrame.IsEnabled = true;
+            NextFrameButton.IsEnabled = true;
+            StartButton.IsEnabled = true;
+
+            timer.Interval = TimeSpan.FromSeconds(1);
+            timer.Tick += timer_Tick;
 
             Trace.WriteLine("Created arena. Button IsEnabled=false");
         }
@@ -137,11 +143,30 @@ namespace PLANET_Proj_1
         }
         private void Start_Click(object sender, RoutedEventArgs e)
         {
+            StartButton.IsEnabled = false;
+            StopButton.IsEnabled = true;
 
+            timer.Start();
         }
+        void timer_Tick(object sender, EventArgs e)
+        {
+            //StopButton.Content = DateTime.Now.ToLongTimeString();
+            NextFrame();
+        }
+
+        private void NextFrame()
+        {
+            MakeMove();
+            RefreshArena();
+            PrevFrame.IsEnabled = true;
+        }
+
         private void Stop_Click(object sender, RoutedEventArgs e)
         {
+            StartButton.IsEnabled = true;
+            StopButton.IsEnabled = false;
 
+            timer.Stop();
         }
         private void PrevFrame_Click(object sender, RoutedEventArgs e)
         {
@@ -204,9 +229,7 @@ namespace PLANET_Proj_1
         }
         private void NextFrame_Click(object sender, RoutedEventArgs e)  
         {
-            MakeMove();
-            RefreshArena();
-            PrevFrame.IsEnabled = true;
+            NextFrame();
         }
         private bool IsAlive(in int x, in int y)
         {

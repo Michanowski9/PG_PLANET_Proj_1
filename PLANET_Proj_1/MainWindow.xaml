@@ -13,10 +13,10 @@
             <Label Margin="10,0,0,0">Y:</Label>
             <TextBox x:Name="InputSizeY" Width="50" Margin="10,0,0,0"></TextBox>
             <Button x:Name="CreateArena" Margin="10,0,0,0" Click="CreateArena_Click">Create Area</Button>
-            <Button x:Name="Start" Margin="10,0,0,0" Click="Start_Click" IsEnabled="False">Start</Button>
-            <Button x:Name="Stop" Margin="10,0,0,0" Click="Stop_Click" IsEnabled="False">Stop</Button>
+            <Button x:Name="StartButton" Margin="10,0,0,0" Click="Start_Click" IsEnabled="False">Start</Button>
+            <Button x:Name="StopButton" Margin="10,0,0,0" Click="Stop_Click" IsEnabled="False">Stop</Button>
             <Button x:Name="PrevFrame" Margin="10,0,0,0" Click="PrevFrame_Click" IsEnabled="False">PrevFrame</Button>
-            <Button x:Name="NextFrame" Margin="10,0,0,0" Click="NextFrame_Click" IsEnabled="False">Next Frame</Button>
+            <Button x:Name="NextFrameButton" Margin="10,0,0,0" Click="NextFrame_Click" IsEnabled="False">Next Frame</Button>
         </StackPanel>
         <Canvas MouseLeftButtonDown="arena_MouseLeftButtonDown" x:Name="Arena" Margin="0,30,0,0"></Canvas>
     </StackPanel>
