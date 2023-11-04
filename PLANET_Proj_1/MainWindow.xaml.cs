@@ -31,9 +31,11 @@ namespace PLANET_Proj_1
 
         // variables
         List<bool[,]> moves = new List<bool[,]>();
-        Rectangle[,] arena;// = new List<Rectangle>();
+        Rectangle[,] arena = null;
         const int WIDTH = FIELD_SIZE;
         const int HEIGHT = FIELD_SIZE;
+
+        int currentFrame = 0;
 
         int arenaSizeX = 0;
         int arenaSizeY = 0;
@@ -57,7 +59,7 @@ namespace PLANET_Proj_1
         }
         private void FieldClick(in int x, in int y)
         {
-            var currentMove = moves[moves.Count - 1];
+            var currentMove = moves[currentFrame];
             if (currentMove[x, y] == false)
             {
                 currentMove[x, y] = true;
@@ -76,6 +78,8 @@ namespace PLANET_Proj_1
 
             CreateFields();
             CreateArena.IsEnabled = false;
+            NextFrame.IsEnabled = true;
+
             Trace.WriteLine("Created arena. Button IsEnabled=false");
         }
         private void CreateFields()
@@ -139,10 +143,19 @@ namespace PLANET_Proj_1
         {
 
         }
-
         private void PrevFrame_Click(object sender, RoutedEventArgs e)
         {
-
+            if (currentFrame <= 0)
+            {
+                return;
+            }
+            currentFrame--;
+            if(currentFrame <=0)
+            {
+                PrevFrame.IsEnabled = false;
+            }
+            moves.RemoveAt(moves.Count - 1);
+            RefreshArena();
         }
         private void MakeMove()
         {
@@ -168,10 +181,12 @@ namespace PLANET_Proj_1
                 }
             }
             moves.Add(nextMove);
+            currentFrame++;
         }
         private void RefreshArena()
         {
-            var current = moves[moves.Count - 1];
+            Trace.WriteLine("Refreshing. Frame:" + currentFrame.ToString());
+            var current = moves[currentFrame];
             for (int y = 0; y < arenaSizeY; y++)
             {
                 for (int x = 0; x < arenaSizeX; x++)
@@ -191,10 +206,11 @@ namespace PLANET_Proj_1
         {
             MakeMove();
             RefreshArena();
+            PrevFrame.IsEnabled = true;
         }
         private bool IsAlive(in int x, in int y)
         {
-            var current = moves[moves.Count - 1];
+            var current = moves[currentFrame];
             if (x < 0) return false;
             if (y < 0) return false;
             if (x >= arenaSizeX) return false;
@@ -224,10 +240,6 @@ namespace PLANET_Proj_1
                 }
             }
             return result;
-        }
-        private int GetDeadNeighborsCount(in int x, in int y)
-        {
-            return 8 - GetLiveNeighborsCount(x, y);
         }
     }
 }
