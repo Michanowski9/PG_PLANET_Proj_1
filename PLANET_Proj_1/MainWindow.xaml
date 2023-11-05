@@ -5,18 +5,85 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PLANET_Proj_1"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="500" Width="900">
     <StackPanel>
         <StackPanel Orientation="Horizontal">
+            <StackPanel.Resources>
+                <Style TargetType="Button">
+                    <Setter Property="Foreground" Value="LightGray" />
+                    <Setter Property="Background" Value="Gray" />
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="FontStyle" Value="Italic"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                                    <ContentPresenter x:Name="PART_Content"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"></ContentPresenter>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="Black" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" Value="#bbb"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Resources>
+            
+            <StackPanel.Triggers>
+                <EventTrigger SourceName="StartButton" RoutedEvent="Button.Click">
+                    <BeginStoryboard Name="myAnimation">
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="StartButton" 
+                                Storyboard.TargetProperty="Opacity"
+                                From="1.0" To="0.2" Duration="0:0:1" 
+                                AutoReverse="True" RepeatBehavior="Forever" />
+                            <ColorAnimation 
+                                Storyboard.TargetName="StartButton"
+                                Storyboard.TargetProperty="Background.Color"
+                                From="Green" To="Red" Duration="0:0:3" 
+                                AutoReverse="True" RepeatBehavior="Forever" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger SourceName="StopButton" RoutedEvent="Button.Click">
+                    <StopStoryboard BeginStoryboardName="myAnimation"/>
+                </EventTrigger>
+            </StackPanel.Triggers>
+            
             <Label>X:</Label>
-            <TextBox x:Name="InputSizeX" Width="50" Margin="10,0,0,0"/>
+            <TextBox x:Name="InputSizeX" Width="40" Margin="0,0,0,0" Height="20"/>
             <Label Margin="10,0,0,0">Y:</Label>
-            <TextBox x:Name="InputSizeY" Width="50" Margin="10,0,0,0"></TextBox>
-            <Button x:Name="CreateArena" Margin="10,0,0,0" Click="CreateArena_Click">Create Area</Button>
-            <Button x:Name="StartButton" Margin="10,0,0,0" Click="Start_Click" IsEnabled="False">Start</Button>
-            <Button x:Name="StopButton" Margin="10,0,0,0" Click="Stop_Click" IsEnabled="False">Stop</Button>
-            <Button x:Name="PrevFrame" Margin="10,0,0,0" Click="PrevFrame_Click" IsEnabled="False">PrevFrame</Button>
-            <Button x:Name="NextFrameButton" Margin="10,0,0,0" Click="NextFrame_Click" IsEnabled="False">Next Frame</Button>
+            <TextBox x:Name="InputSizeY" Width="39" Margin="0,0,0,0" Height="20"></TextBox>
+            <Button x:Name="CreateArena" Margin="10,0,0,0" Click="CreateArena_Click" Height="20">Create Area</Button>
+            <Label Margin="10,0,0,0">Timer:</Label>
+            <TextBox x:Name="InputTimer" Width="40" Margin="10,0,0,0" Height="20"></TextBox>
+            <Button x:Name="StartButton" Margin="10,0,0,0" Click="Start_Click" IsEnabled="False" Height="20">Start</Button>
+            <Button x:Name="StopButton" Margin="10,0,0,0" Click="Stop_Click" IsEnabled="False" Height="20">Stop</Button>
+            <Button x:Name="PrevFrame" Margin="10,0,0,0" Click="PrevFrame_Click" IsEnabled="False" Height="20">PrevFrame</Button>
+            <Button x:Name="NextFrameButton" Margin="10,0,0,0" Click="NextFrame_Click" IsEnabled="False" Height="20">Next Frame</Button>
+            <Label Margin="10,0,0,0">FileName:</Label>
+            <TextBox x:Name="InputFileName" Width="80" Margin="0,0,0,0" Height="20"></TextBox>
+            <Button x:Name="SaveButton" Margin="10,0,0,0" Click="Save_Click" Height="20" IsEnabled="False">Save</Button>
+            <Button x:Name="LoadButton" Margin="10,0,0,0" Click="Load_Click" Height="20">Load</Button>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <Label Margin="10,0,0,0" Height="10" Width="44" FontSize="8" Padding="0,0,0,0">Generation:</Label>
+            <Label x:Name="Generation" Margin="0,0,0,0" Height="10" Width="39" FontSize="8" Padding="0,0,0,0"></Label>
+            <Label Margin="10,0,0,0" Height="10" Width="23" FontSize="8" Padding="0,0,0,0">Born:</Label>
+            <Label x:Name="Born" Margin="0,0,0,0" Height="10" Width="39" FontSize="8" Padding="0,0,0,0"></Label>
+            <Label Margin="10,0,0,0" Height="10" Width="24" FontSize="8" Padding="0,0,0,0">Dead:</Label>
+            <Label x:Name="Dead" Margin="0,0,0,0" Height="10" Width="39" FontSize="8" Padding="0,0,0,0"></Label>
         </StackPanel>
         <Canvas MouseLeftButtonDown="arena_MouseLeftButtonDown" x:Name="Arena" Margin="0,30,0,0"></Canvas>
     </StackPanel>

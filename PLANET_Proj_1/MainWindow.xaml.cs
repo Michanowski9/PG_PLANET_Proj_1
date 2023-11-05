@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
@@ -34,7 +35,7 @@ namespace PLANET_Proj_1
         List<bool[,]> moves = new List<bool[,]>();
         Rectangle[,] arena = null;
         DispatcherTimer timer = new DispatcherTimer();
-        
+
         const int WIDTH = FIELD_SIZE;
         const int HEIGHT = FIELD_SIZE;
 
@@ -82,8 +83,9 @@ namespace PLANET_Proj_1
             CreateArena.IsEnabled = false;
             NextFrameButton.IsEnabled = true;
             StartButton.IsEnabled = true;
+            LoadButton.IsEnabled = false;
+            SaveButton.IsEnabled = true;
 
-            timer.Interval = TimeSpan.FromSeconds(1);
             timer.Tick += timer_Tick;
 
             Trace.WriteLine("Created arena. Button IsEnabled=false");
@@ -146,21 +148,25 @@ namespace PLANET_Proj_1
             StartButton.IsEnabled = false;
             StopButton.IsEnabled = true;
 
+            int timerInterval = 0;
+            if (int.TryParse(InputTimer.Text.ToString(), out timerInterval)) { }
+            else
+                timerInterval = 1000;
+
+            timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
             timer.Start();
         }
-        void timer_Tick(object sender, EventArgs e)
+        private void timer_Tick(object sender, EventArgs e)
         {
             //StopButton.Content = DateTime.Now.ToLongTimeString();
             NextFrame();
         }
-
         private void NextFrame()
         {
             MakeMove();
             RefreshArena();
             PrevFrame.IsEnabled = true;
         }
-
         private void Stop_Click(object sender, RoutedEventArgs e)
         {
             StartButton.IsEnabled = true;
@@ -175,17 +181,22 @@ namespace PLANET_Proj_1
                 return;
             }
             currentFrame--;
-            if(currentFrame <=0)
+            if (currentFrame <= 0)
             {
                 PrevFrame.IsEnabled = false;
             }
             moves.RemoveAt(moves.Count - 1);
-            RefreshArena();
+
+            Born.Content = "";
+            Dead.Content = "";
+            RefreshArena()  ;
         }
         private void MakeMove()
         {
             var nextMove = new bool[arenaSizeX, arenaSizeY];
 
+            int born = 0;
+            int dead = 0;
             for (int y = 0; y < arenaSizeY; y++)
             {
                 for (int x = 0; x < arenaSizeX; x++)
@@ -203,8 +214,19 @@ namespace PLANET_Proj_1
                     {
                         nextMove[x, y] = false;
                     }
+                    
+                    if (moves[currentFrame][x,y] == true && nextMove[x, y] == false) 
+                    {
+                        dead++;
+                    }
+                    else if (moves[currentFrame][x, y] == false && nextMove[x, y] == true) 
+                    {
+                        born++;
+                    }
                 }
             }
+            Born.Content = born.ToString();
+            Dead.Content = dead.ToString();
             moves.Add(nextMove);
             currentFrame++;
         }
@@ -216,7 +238,7 @@ namespace PLANET_Proj_1
             {
                 for (int x = 0; x < arenaSizeX; x++)
                 {
-                    if (current[x,y])
+                    if (current[x, y])
                     {
                         arena[x, y].Fill = OCCUPIED_FIELD_COLOR;
                     }
@@ -226,8 +248,9 @@ namespace PLANET_Proj_1
                     }
                 }
             }
+            Generation.Content = currentFrame.ToString();
         }
-        private void NextFrame_Click(object sender, RoutedEventArgs e)  
+        private void NextFrame_Click(object sender, RoutedEventArgs e)
         {
             NextFrame();
         }
@@ -263,6 +286,59 @@ namespace PLANET_Proj_1
                 }
             }
             return result;
+        }
+        private string GetFileName()
+        {
+            if (InputFileName.Text == "")
+                return "DefaultFile";
+            else
+                return InputFileName.Text;
+        }
+        private void Save_Click(object sender, RoutedEventArgs e)
+        {
+            using (StreamWriter writer = new StreamWriter(GetFileName()))
+            {
+                writer.WriteLine(arenaSizeX.ToString() + " " + arenaSizeY.ToString());
+                for (int y = 0; y < arenaSizeY; y++)
+                {
+                    var row = "";
+                    for (int x = 0; x < arenaSizeX; x++)
+                    {
+                        row += moves[currentFrame][x, y] + " ";
+                    }
+                    writer.WriteLine(row);
+                }
+            }
+        }
+        private void Load_Click(object sender, RoutedEventArgs e)
+        {
+            string line = "";
+            using (StreamReader sr = new StreamReader(GetFileName()))
+            {
+                line = sr.ReadLine();
+                var size = line.Split(" ");
+
+                arenaSizeX =Convert.ToInt32(size[0]);
+                arenaSizeY = Convert.ToInt32(size[1]);
+                CreateFields();
+
+                for (int y = 0; (line = sr.ReadLine()) != null && y < arenaSizeY; y++)
+                {
+                    var temp = line.Split(" ");
+                    for (int x = 0; x < arenaSizeX; x++)
+                    {
+                        if (temp[x] == "True")
+                        {
+                            moves[currentFrame][x, y] = true;
+                        }
+                        else if (temp[x] == "False")
+                        {
+                            moves[currentFrame][x, y] = false;
+                        }
+                    }
+                }
+            }
+            RefreshArena();
         }
     }
 }
