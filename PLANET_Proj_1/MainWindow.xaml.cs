@@ -149,7 +149,8 @@ namespace PLANET_Proj_1
             StopButton.IsEnabled = true;
 
             int timerInterval = 0;
-            if (int.TryParse(InputTimer.Text.ToString(), out timerInterval)) { }
+            if (int.TryParse(InputTimer.Text.ToString(), out timerInterval)) 
+                { }
             else
                 timerInterval = 1000;
 

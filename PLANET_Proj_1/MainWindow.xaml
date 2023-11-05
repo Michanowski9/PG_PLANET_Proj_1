@@ -6,9 +6,17 @@
         xmlns:local="clr-namespace:PLANET_Proj_1"
         mc:Ignorable="d"
         Title="MainWindow" Height="500" Width="900">
+    
     <StackPanel>
         <StackPanel Orientation="Horizontal">
             <StackPanel.Resources>
+                <ControlTemplate x:Key="roundbutton" TargetType="Button">
+                    <Grid>
+                        <Ellipse Fill="{TemplateBinding Background}" Stroke="{TemplateBinding Foreground}" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                </ControlTemplate>
+
                 <Style TargetType="Button">
                     <Setter Property="Foreground" Value="LightGray" />
                     <Setter Property="Background" Value="Gray" />
@@ -38,7 +46,6 @@
                     </Style.Triggers>
                 </Style>
             </StackPanel.Resources>
-            
             <StackPanel.Triggers>
                 <EventTrigger SourceName="StartButton" RoutedEvent="Button.Click">
                     <BeginStoryboard Name="myAnimation">
@@ -65,7 +72,7 @@
             <TextBox x:Name="InputSizeX" Width="40" Margin="0,0,0,0" Height="20"/>
             <Label Margin="10,0,0,0">Y:</Label>
             <TextBox x:Name="InputSizeY" Width="39" Margin="0,0,0,0" Height="20"></TextBox>
-            <Button x:Name="CreateArena" Margin="10,0,0,0" Click="CreateArena_Click" Height="20">Create Area</Button>
+            <Button x:Name="CreateArena" Template="{StaticResource roundbutton}" Margin="10,0,0,0" Click="CreateArena_Click" Height="22" Width="90">Create Area</Button>
             <Label Margin="10,0,0,0">Timer:</Label>
             <TextBox x:Name="InputTimer" Width="40" Margin="10,0,0,0" Height="20"></TextBox>
             <Button x:Name="StartButton" Margin="10,0,0,0" Click="Start_Click" IsEnabled="False" Height="20">Start</Button>
