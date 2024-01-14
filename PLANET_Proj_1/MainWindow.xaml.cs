@@ -20,326 +20,393 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace PLANET_Proj_1
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
-    {
-        // settings
-        const int FIELD_SIZE = 10;
-        private readonly Brush EMPTY_FIELD_COLOR = Brushes.Gray;
-        private readonly Brush OCCUPIED_FIELD_COLOR = Brushes.Red;
-        private readonly Brush FIELD_BORDER_COLOR = Brushes.LightGray;
+	/// <summary>
+	/// Interaction logic for MainWindow.xaml
+	/// </summary>
+	public partial class MainWindow : Window
+	{
+		private PerformanceCounter makeMoveCounter;
+		private PerformanceCounter refreshArenaCounter;
+		private PerformanceCounter bornCounter;
+		private PerformanceCounter deadCounter;
 
-        // variables
-        List<bool[,]> moves = new List<bool[,]>();
-        Rectangle[,] arena = null;
-        DispatcherTimer timer = new DispatcherTimer();
+		// settings
+		const int FIELD_SIZE = 10;
+		private readonly Brush EMPTY_FIELD_COLOR = Brushes.Gray;
+		private readonly Brush OCCUPIED_FIELD_COLOR = Brushes.Red;
+		private readonly Brush FIELD_BORDER_COLOR = Brushes.LightGray;
 
-        const int WIDTH = FIELD_SIZE;
-        const int HEIGHT = FIELD_SIZE;
+		// variables
+		List<bool[,]> moves = new List<bool[,]>();
+		Rectangle[,] arena = null;
+		DispatcherTimer timer = new DispatcherTimer();
 
-        int currentFrame = 0;
-        int arenaSizeX = 0;
-        int arenaSizeY = 0;
+		const int WIDTH = FIELD_SIZE;
+		const int HEIGHT = FIELD_SIZE;
 
-        // functions
-        public MainWindow()
-        {
-            InitializeComponent();
-            Trace.WriteLine("Created main window.");
-        }
-        private void arena_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            Point p = Mouse.GetPosition(Arena);
+		int currentFrame = 0;
+		int arenaSizeX = 0;
+		int arenaSizeY = 0;
 
-            int x = Convert.ToInt32(p.X) / WIDTH;
-            int y = Convert.ToInt32(p.Y) / HEIGHT;
+		// functions
+		public MainWindow()
+		{
+			InitializeComponent();
+			Trace.WriteLine("Created main window.");
+			InitializeCounters();
+		}
+		private void InitializeCounters()
+		{
 
-            FieldClick(x, y);
+			// Sprawdź, czy kategoria już istnieje
+			if (PerformanceCounterCategory.Exists("PLANET_Proj_1 Counters"))
+			{
+				// Jeśli tak, usuń ją
+				PerformanceCounterCategory.Delete("PLANET_Proj_1 Counters");
+			}
 
-            Trace.WriteLine("pressed: x=" + x.ToString() + " y=" + y.ToString());
-        }
-        private void FieldClick(in int x, in int y)
-        {
-            var currentMove = moves[currentFrame];
-            if (currentMove[x, y] == false)
-            {
-                currentMove[x, y] = true;
-                arena[x, y].Fill = OCCUPIED_FIELD_COLOR;
-            }
-            else
-            {
-                currentMove[x, y] = false;
-                arena[x, y].Fill = EMPTY_FIELD_COLOR;
-            }
-        }
-        private void CreateArena_Click(object sender, RoutedEventArgs e)
-        {
-            SetInputSizeX();
-            SetInputSizeY();
+			// Utwórz kategorię od nowa
+			CounterCreationDataCollection counters = new CounterCreationDataCollection();
 
-            CreateFields();
-            CreateArena.IsEnabled = false;
-            NextFrameButton.IsEnabled = true;
-            StartButton.IsEnabled = true;
-            LoadButton.IsEnabled = false;
-            SaveButton.IsEnabled = true;
+			// Licznik dla MakeMove
+			CounterCreationData makeMoveCounterData = new CounterCreationData();
+			makeMoveCounterData.CounterName = "MakeMoveDuration";
+			makeMoveCounterData.CounterType = PerformanceCounterType.ElapsedTime;
+			counters.Add(makeMoveCounterData);
 
-            timer.Tick += timer_Tick;
+			// Licznik dla RefreshArena
+			CounterCreationData refreshArenaCounterData = new CounterCreationData();
+			refreshArenaCounterData.CounterName = "RefreshArenaDuration";
+			refreshArenaCounterData.CounterType = PerformanceCounterType.ElapsedTime;
+			counters.Add(refreshArenaCounterData);
 
-            Trace.WriteLine("Created arena. Button IsEnabled=false");
-        }
-        private void CreateFields()
-        {
-            moves.Add(new bool[arenaSizeX, arenaSizeY]);
+			// Born counter
+			CounterCreationData bornCounterData = new CounterCreationData();
+			bornCounterData.CounterName = "BornCounter";
+			bornCounterData.CounterType = PerformanceCounterType.NumberOfItems32;
+			counters.Add(bornCounterData);
 
-            arena = new Rectangle[arenaSizeX, arenaSizeY];
-            for (int y = 0; y < arenaSizeY; y++)
-            {
-                for (int x = 0; x < arenaSizeX; x++)
-                {
-                    var field = new Rectangle();
+			// Dead counter
+			CounterCreationData deadCounterData = new CounterCreationData();
+			deadCounterData.CounterName = "DeadCounter";
+			deadCounterData.CounterType = PerformanceCounterType.NumberOfItems32;
+			counters.Add(deadCounterData);
 
-                    field.Name = "Field_" + x.ToString() + "_" + y.ToString();
+			// Utwórz kategorię
+			PerformanceCounterCategory.Create("PLANET_Proj_1 Counters", "Liczniki dla aplikacji PLANET_Proj_1", PerformanceCounterCategoryType.SingleInstance, counters);
 
-                    // size
-                    field.Width = WIDTH;
-                    field.Height = HEIGHT;
+			// Utwórz liczniki wydajności
+			makeMoveCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "MakeMoveDuration", false);
+			refreshArenaCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "RefreshArenaDuration", false);
+			bornCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "BornCounter", false);
+			deadCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "DeadCounter", false);
+		}
 
-                    // colors
-                    field.Fill = EMPTY_FIELD_COLOR;
-                    field.Stroke = FIELD_BORDER_COLOR;
+		private void arena_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			Point p = Mouse.GetPosition(Arena);
 
-                    // border
-                    field.StrokeThickness = 1;
-                    field.RadiusX = 2;
-                    field.RadiusY = 2;
+			int x = Convert.ToInt32(p.X) / WIDTH;
+			int y = Convert.ToInt32(p.Y) / HEIGHT;
 
-                    // position
-                    Canvas.SetTop(field, y * HEIGHT);
-                    Canvas.SetLeft(field, x * WIDTH);
+			FieldClick(x, y);
 
-                    arena[x, y] = field;
-                    Arena.Children.Add(field);
-                }
-            }
-        }
-        private void SetInputSizeX()
-        {
-            if (int.TryParse(InputSizeX.Text.ToString(), out arenaSizeX))
-            { }
-            else
-            {
-                arenaSizeX = 10;
-            }
-        }
-        private void SetInputSizeY()
-        {
-            if (int.TryParse(InputSizeY.Text.ToString(), out arenaSizeY))
-            { }
-            else
-            {
-                arenaSizeY = 10;
-            }
-        }
-        private void Start_Click(object sender, RoutedEventArgs e)
-        {
-            StartButton.IsEnabled = false;
-            StopButton.IsEnabled = true;
+			Trace.WriteLine("pressed: x=" + x.ToString() + " y=" + y.ToString());
+		}
+		private void FieldClick(in int x, in int y)
+		{
+			var currentMove = moves[currentFrame];
+			if (currentMove[x, y] == false)
+			{
+				currentMove[x, y] = true;
+				arena[x, y].Fill = OCCUPIED_FIELD_COLOR;
+			}
+			else
+			{
+				currentMove[x, y] = false;
+				arena[x, y].Fill = EMPTY_FIELD_COLOR;
+			}
+		}
+		private void CreateArena_Click(object sender, RoutedEventArgs e)
+		{
+			SetInputSizeX();
+			SetInputSizeY();
 
-            int timerInterval = 0;
-            if (int.TryParse(InputTimer.Text.ToString(), out timerInterval)) 
-                { }
-            else
-                timerInterval = 1000;
+			CreateFields();
+			CreateArena.IsEnabled = false;
+			NextFrameButton.IsEnabled = true;
+			StartButton.IsEnabled = true;
+			LoadButton.IsEnabled = false;
+			SaveButton.IsEnabled = true;
 
-            timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
-            timer.Start();
-        }
-        private void timer_Tick(object sender, EventArgs e)
-        {
-            //StopButton.Content = DateTime.Now.ToLongTimeString();
-            NextFrame();
-        }
-        private void NextFrame()
-        {
-            MakeMove();
-            RefreshArena();
-            PrevFrame.IsEnabled = true;
-        }
-        private void Stop_Click(object sender, RoutedEventArgs e)
-        {
-            StartButton.IsEnabled = true;
-            StopButton.IsEnabled = false;
+			timer.Tick += timer_Tick;
 
-            timer.Stop();
-        }
-        private void PrevFrame_Click(object sender, RoutedEventArgs e)
-        {
-            if (currentFrame <= 0)
-            {
-                return;
-            }
-            currentFrame--;
-            if (currentFrame <= 0)
-            {
-                PrevFrame.IsEnabled = false;
-            }
-            moves.RemoveAt(moves.Count - 1);
+			Trace.WriteLine("Created arena. Button IsEnabled=false");
+		}
+		private void CreateFields()
+		{
+			moves.Add(new bool[arenaSizeX, arenaSizeY]);
 
-            Born.Content = "";
-            Dead.Content = "";
-            RefreshArena()  ;
-        }
-        private void MakeMove()
-        {
-            var nextMove = new bool[arenaSizeX, arenaSizeY];
+			arena = new Rectangle[arenaSizeX, arenaSizeY];
+			for (int y = 0; y < arenaSizeY; y++)
+			{
+				for (int x = 0; x < arenaSizeX; x++)
+				{
+					var field = new Rectangle();
 
-            int born = 0;
-            int dead = 0;
-            for (int y = 0; y < arenaSizeY; y++)
-            {
-                for (int x = 0; x < arenaSizeX; x++)
-                {
-                    if (IsAlive(x, y) &&
-                        (GetLiveNeighborsCount(x, y) == 2 || GetLiveNeighborsCount(x, y) == 3))
-                    {
-                        nextMove[x, y] = true;
-                    }
-                    else if (!IsAlive(x, y) && GetLiveNeighborsCount(x, y) == 3)
-                    {
-                        nextMove[x, y] = true;
-                    }
-                    else
-                    {
-                        nextMove[x, y] = false;
-                    }
-                    
-                    if (moves[currentFrame][x,y] == true && nextMove[x, y] == false) 
-                    {
-                        dead++;
-                    }
-                    else if (moves[currentFrame][x, y] == false && nextMove[x, y] == true) 
-                    {
-                        born++;
-                    }
-                }
-            }
-            Born.Content = born.ToString();
-            Dead.Content = dead.ToString();
-            moves.Add(nextMove);
-            currentFrame++;
-        }
-        private void RefreshArena()
-        {
-            Trace.WriteLine("Refreshing. Frame:" + currentFrame.ToString());
-            var current = moves[currentFrame];
-            for (int y = 0; y < arenaSizeY; y++)
-            {
-                for (int x = 0; x < arenaSizeX; x++)
-                {
-                    if (current[x, y])
-                    {
-                        arena[x, y].Fill = OCCUPIED_FIELD_COLOR;
-                    }
-                    else
-                    {
-                        arena[x, y].Fill = EMPTY_FIELD_COLOR;
-                    }
-                }
-            }
-            Generation.Content = currentFrame.ToString();
-        }
-        private void NextFrame_Click(object sender, RoutedEventArgs e)
-        {
-            NextFrame();
-        }
-        private bool IsAlive(in int x, in int y)
-        {
-            var current = moves[currentFrame];
-            if (x < 0) return false;
-            if (y < 0) return false;
-            if (x >= arenaSizeX) return false;
-            if (y >= arenaSizeY) return false;
-            return current[x, y];
-        }
-        private int GetLiveNeighborsCount(in int x, in int y)
-        {
-            Point[] neighbors =
-           {
-                new Point(x - 1, y - 1),
-                new Point(x - 1, y),
-                new Point(x - 1, y + 1),
-                new Point(x    , y - 1),
-                new Point(x    , y + 1),
-                new Point(x + 1, y - 1),
-                new Point(x + 1, y),
-                new Point(x + 1, y + 1)
-            };
+					field.Name = "Field_" + x.ToString() + "_" + y.ToString();
 
-            int result = 0;
-            foreach (var neighbor in neighbors)
-            {
-                if (IsAlive(Convert.ToInt32(neighbor.X), Convert.ToInt32(neighbor.Y)))
-                {
-                    result++;
-                }
-            }
-            return result;
-        }
-        private string GetFileName()
-        {
-            if (InputFileName.Text == "")
-                return "DefaultFile";
-            else
-                return InputFileName.Text;
-        }
-        private void Save_Click(object sender, RoutedEventArgs e)
-        {
-            using (StreamWriter writer = new StreamWriter(GetFileName()))
-            {
-                writer.WriteLine(arenaSizeX.ToString() + " " + arenaSizeY.ToString());
-                for (int y = 0; y < arenaSizeY; y++)
-                {
-                    var row = "";
-                    for (int x = 0; x < arenaSizeX; x++)
-                    {
-                        row += moves[currentFrame][x, y] + " ";
-                    }
-                    writer.WriteLine(row);
-                }
-            }
-        }
-        private void Load_Click(object sender, RoutedEventArgs e)
-        {
-            string line = "";
-            using (StreamReader sr = new StreamReader(GetFileName()))
-            {
-                line = sr.ReadLine();
-                var size = line.Split(" ");
+					// size
+					field.Width = WIDTH;
+					field.Height = HEIGHT;
 
-                arenaSizeX =Convert.ToInt32(size[0]);
-                arenaSizeY = Convert.ToInt32(size[1]);
-                CreateFields();
+					// colors
+					field.Fill = EMPTY_FIELD_COLOR;
+					field.Stroke = FIELD_BORDER_COLOR;
 
-                for (int y = 0; (line = sr.ReadLine()) != null && y < arenaSizeY; y++)
-                {
-                    var temp = line.Split(" ");
-                    for (int x = 0; x < arenaSizeX; x++)
-                    {
-                        if (temp[x] == "True")
-                        {
-                            moves[currentFrame][x, y] = true;
-                        }
-                        else if (temp[x] == "False")
-                        {
-                            moves[currentFrame][x, y] = false;
-                        }
-                    }
-                }
-            }
-            RefreshArena();
-        }
-    }
+					// border
+					field.StrokeThickness = 1;
+					field.RadiusX = 2;
+					field.RadiusY = 2;
+
+					// position
+					Canvas.SetTop(field, y * HEIGHT);
+					Canvas.SetLeft(field, x * WIDTH);
+
+					arena[x, y] = field;
+					Arena.Children.Add(field);
+				}
+			}
+		}
+		private void SetInputSizeX()
+		{
+			if (int.TryParse(InputSizeX.Text.ToString(), out arenaSizeX))
+			{ }
+			else
+			{
+				arenaSizeX = 10;
+			}
+		}
+		private void SetInputSizeY()
+		{
+			if (int.TryParse(InputSizeY.Text.ToString(), out arenaSizeY))
+			{ }
+			else
+			{
+				arenaSizeY = 10;
+			}
+		}
+		private void Start_Click(object sender, RoutedEventArgs e)
+		{
+			StartButton.IsEnabled = false;
+			StopButton.IsEnabled = true;
+
+			int timerInterval = 0;
+			if (int.TryParse(InputTimer.Text.ToString(), out timerInterval))
+			{ }
+			else
+				timerInterval = 1000;
+
+			timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
+			timer.Start();
+		}
+		private void timer_Tick(object sender, EventArgs e)
+		{
+			//StopButton.Content = DateTime.Now.ToLongTimeString();
+			NextFrame();
+		}
+		private void NextFrame()
+		{
+			MakeMove();
+			RefreshArena();
+			PrevFrame.IsEnabled = true;
+		}
+		private void Stop_Click(object sender, RoutedEventArgs e)
+		{
+			StartButton.IsEnabled = true;
+			StopButton.IsEnabled = false;
+
+			timer.Stop();
+		}
+		private void PrevFrame_Click(object sender, RoutedEventArgs e)
+		{
+			if (currentFrame <= 0)
+			{
+				return;
+			}
+			currentFrame--;
+			if (currentFrame <= 0)
+			{
+				PrevFrame.IsEnabled = false;
+			}
+			moves.RemoveAt(moves.Count - 1);
+
+			Born.Content = "";
+			Dead.Content = "";
+			RefreshArena();
+		}
+		private void MakeMove()
+		{
+			Stopwatch stopwatch = new Stopwatch();
+			stopwatch.Start();
+
+			var nextMove = new bool[arenaSizeX, arenaSizeY];
+
+			int born = 0;
+			int dead = 0;
+			for (int y = 0; y < arenaSizeY; y++)
+			{
+				for (int x = 0; x < arenaSizeX; x++)
+				{
+					if (IsAlive(x, y) &&
+						(GetLiveNeighborsCount(x, y) == 2 || GetLiveNeighborsCount(x, y) == 3))
+					{
+						nextMove[x, y] = true;
+					}
+					else if (!IsAlive(x, y) && GetLiveNeighborsCount(x, y) == 3)
+					{
+						nextMove[x, y] = true;
+					}
+					else
+					{
+						nextMove[x, y] = false;
+					}
+
+					if (moves[currentFrame][x, y] == true && nextMove[x, y] == false)
+					{
+						dead++;
+					}
+					else if (moves[currentFrame][x, y] == false && nextMove[x, y] == true)
+					{
+						born++;
+					}
+				}
+			}
+			Born.Content = born.ToString();
+			Dead.Content = dead.ToString();
+			bornCounter.RawValue = born;
+			deadCounter.RawValue = dead;
+			moves.Add(nextMove);
+			currentFrame++;
+
+			stopwatch.Stop();
+			makeMoveCounter.IncrementBy(stopwatch.ElapsedMilliseconds);
+		}
+		private void RefreshArena()
+		{
+			Stopwatch stopwatch = new Stopwatch();
+			stopwatch.Start();
+
+			Trace.WriteLine("Refreshing. Frame:" + currentFrame.ToString());
+			var current = moves[currentFrame];
+			for (int y = 0; y < arenaSizeY; y++)
+			{
+				for (int x = 0; x < arenaSizeX; x++)
+				{
+					if (current[x, y])
+					{
+						arena[x, y].Fill = OCCUPIED_FIELD_COLOR;
+					}
+					else
+					{
+						arena[x, y].Fill = EMPTY_FIELD_COLOR;
+					}
+				}
+			}
+			Generation.Content = currentFrame.ToString();
+
+			stopwatch.Stop();
+			refreshArenaCounter.IncrementBy(stopwatch.ElapsedMilliseconds);
+		}
+		private void NextFrame_Click(object sender, RoutedEventArgs e)
+		{
+			NextFrame();
+		}
+		private bool IsAlive(in int x, in int y)
+		{
+			var current = moves[currentFrame];
+			if (x < 0) return false;
+			if (y < 0) return false;
+			if (x >= arenaSizeX) return false;
+			if (y >= arenaSizeY) return false;
+			return current[x, y];
+		}
+		private int GetLiveNeighborsCount(in int x, in int y)
+		{
+			Point[] neighbors =
+		   {
+				new Point(x - 1, y - 1),
+				new Point(x - 1, y),
+				new Point(x - 1, y + 1),
+				new Point(x    , y - 1),
+				new Point(x    , y + 1),
+				new Point(x + 1, y - 1),
+				new Point(x + 1, y),
+				new Point(x + 1, y + 1)
+			};
+
+			int result = 0;
+			foreach (var neighbor in neighbors)
+			{
+				if (IsAlive(Convert.ToInt32(neighbor.X), Convert.ToInt32(neighbor.Y)))
+				{
+					result++;
+				}
+			}
+			return result;
+		}
+		private string GetFileName()
+		{
+			if (InputFileName.Text == "")
+				return "DefaultFile";
+			else
+				return InputFileName.Text;
+		}
+		private void Save_Click(object sender, RoutedEventArgs e)
+		{
+			using (StreamWriter writer = new StreamWriter(GetFileName()))
+			{
+				writer.WriteLine(arenaSizeX.ToString() + " " + arenaSizeY.ToString());
+				for (int y = 0; y < arenaSizeY; y++)
+				{
+					var row = "";
+					for (int x = 0; x < arenaSizeX; x++)
+					{
+						row += moves[currentFrame][x, y] + " ";
+					}
+					writer.WriteLine(row);
+				}
+			}
+		}
+		private void Load_Click(object sender, RoutedEventArgs e)
+		{
+			string line = "";
+			using (StreamReader sr = new StreamReader(GetFileName()))
+			{
+				line = sr.ReadLine();
+				var size = line.Split(" ");
+
+				arenaSizeX = Convert.ToInt32(size[0]);
+				arenaSizeY = Convert.ToInt32(size[1]);
+				CreateFields();
+
+				for (int y = 0; (line = sr.ReadLine()) != null && y < arenaSizeY; y++)
+				{
+					var temp = line.Split(" ");
+					for (int x = 0; x < arenaSizeX; x++)
+					{
+						if (temp[x] == "True")
+						{
+							moves[currentFrame][x, y] = true;
+						}
+						else if (temp[x] == "False")
+						{
+							moves[currentFrame][x, y] = false;
+						}
+					}
+				}
+			}
+			RefreshArena();
+		}
+	}
 }
