@@ -20,9 +20,6 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace PLANET_Proj_1
 {
-	/// <summary>
-	/// Interaction logic for MainWindow.xaml
-	/// </summary>
 	public partial class MainWindow : Window
 	{
 		private PerformanceCounter makeMoveCounter;
@@ -39,7 +36,6 @@ namespace PLANET_Proj_1
 		// variables
 		List<bool[,]> moves = new List<bool[,]>();
 		Rectangle[,] arena = null;
-		DispatcherTimer timer = new DispatcherTimer();
 
 		const int WIDTH = FIELD_SIZE;
 		const int HEIGHT = FIELD_SIZE;
@@ -48,70 +44,60 @@ namespace PLANET_Proj_1
 		int arenaSizeX = 0;
 		int arenaSizeY = 0;
 
+		ILogger logger;
+		ITimer timer;
+
 		// functions
-		public MainWindow()
+		public MainWindow(ILogger logger, ITimer timer)
 		{
+			this.logger = logger;
+			this.timer = timer;
+
+			this.timer.AddFunc(timer_Tick);
+
 			InitializeComponent();
-			Trace.WriteLine("Created main window.");
+			logger.Print("Created main window.");
+
 			InitializeCounters();
 		}
+		
 		private void InitializeCounters()
 		{
 
-			// Sprawdź, czy kategoria już istnieje
 			if (PerformanceCounterCategory.Exists("PLANET_Proj_1 Counters"))
 			{
-				// Jeśli tak, usuń ją
 				PerformanceCounterCategory.Delete("PLANET_Proj_1 Counters");
 			}
-
-			// Utwórz kategorię od nowa
 			CounterCreationDataCollection counters = new CounterCreationDataCollection();
 
-			// Licznik dla MakeMove
 			CounterCreationData makeMoveCounterData = new CounterCreationData();
 			makeMoveCounterData.CounterName = "MakeMoveDuration";
 			makeMoveCounterData.CounterType = PerformanceCounterType.ElapsedTime;
 			counters.Add(makeMoveCounterData);
 
-			// Licznik dla RefreshArena
 			CounterCreationData refreshArenaCounterData = new CounterCreationData();
 			refreshArenaCounterData.CounterName = "RefreshArenaDuration";
 			refreshArenaCounterData.CounterType = PerformanceCounterType.ElapsedTime;
 			counters.Add(refreshArenaCounterData);
 
-			// Born counter
 			CounterCreationData bornCounterData = new CounterCreationData();
 			bornCounterData.CounterName = "BornCounter";
 			bornCounterData.CounterType = PerformanceCounterType.NumberOfItems32;
 			counters.Add(bornCounterData);
 
-			// Dead counter
 			CounterCreationData deadCounterData = new CounterCreationData();
 			deadCounterData.CounterName = "DeadCounter";
 			deadCounterData.CounterType = PerformanceCounterType.NumberOfItems32;
 			counters.Add(deadCounterData);
 
-			// Utwórz kategorię
 			PerformanceCounterCategory.Create("PLANET_Proj_1 Counters", "Liczniki dla aplikacji PLANET_Proj_1", PerformanceCounterCategoryType.SingleInstance, counters);
 
-			// Utwórz liczniki wydajności
 			makeMoveCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "MakeMoveDuration", false);
 			refreshArenaCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "RefreshArenaDuration", false);
 			bornCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "BornCounter", false);
 			deadCounter = new PerformanceCounter("PLANET_Proj_1 Counters", "DeadCounter", false);
-		}
 
-		private void arena_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-		{
-			Point p = Mouse.GetPosition(Arena);
-
-			int x = Convert.ToInt32(p.X) / WIDTH;
-			int y = Convert.ToInt32(p.Y) / HEIGHT;
-
-			FieldClick(x, y);
-
-			Trace.WriteLine("pressed: x=" + x.ToString() + " y=" + y.ToString());
+			logger.Print("Counters initialized.");
 		}
 		private void FieldClick(in int x, in int y)
 		{
@@ -126,22 +112,6 @@ namespace PLANET_Proj_1
 				currentMove[x, y] = false;
 				arena[x, y].Fill = EMPTY_FIELD_COLOR;
 			}
-		}
-		private void CreateArena_Click(object sender, RoutedEventArgs e)
-		{
-			SetInputSizeX();
-			SetInputSizeY();
-
-			CreateFields();
-			CreateArena.IsEnabled = false;
-			NextFrameButton.IsEnabled = true;
-			StartButton.IsEnabled = true;
-			LoadButton.IsEnabled = false;
-			SaveButton.IsEnabled = true;
-
-			timer.Tick += timer_Tick;
-
-			Trace.WriteLine("Created arena. Button IsEnabled=false");
 		}
 		private void CreateFields()
 		{
@@ -196,23 +166,8 @@ namespace PLANET_Proj_1
 				arenaSizeY = 10;
 			}
 		}
-		private void Start_Click(object sender, RoutedEventArgs e)
-		{
-			StartButton.IsEnabled = false;
-			StopButton.IsEnabled = true;
-
-			int timerInterval = 0;
-			if (int.TryParse(InputTimer.Text.ToString(), out timerInterval))
-			{ }
-			else
-				timerInterval = 1000;
-
-			timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
-			timer.Start();
-		}
 		private void timer_Tick(object sender, EventArgs e)
 		{
-			//StopButton.Content = DateTime.Now.ToLongTimeString();
 			NextFrame();
 		}
 		private void NextFrame()
@@ -220,30 +175,6 @@ namespace PLANET_Proj_1
 			MakeMove();
 			RefreshArena();
 			PrevFrame.IsEnabled = true;
-		}
-		private void Stop_Click(object sender, RoutedEventArgs e)
-		{
-			StartButton.IsEnabled = true;
-			StopButton.IsEnabled = false;
-
-			timer.Stop();
-		}
-		private void PrevFrame_Click(object sender, RoutedEventArgs e)
-		{
-			if (currentFrame <= 0)
-			{
-				return;
-			}
-			currentFrame--;
-			if (currentFrame <= 0)
-			{
-				PrevFrame.IsEnabled = false;
-			}
-			moves.RemoveAt(moves.Count - 1);
-
-			Born.Content = "";
-			Dead.Content = "";
-			RefreshArena();
 		}
 		private void MakeMove()
 		{
@@ -297,7 +228,7 @@ namespace PLANET_Proj_1
 			Stopwatch stopwatch = new Stopwatch();
 			stopwatch.Start();
 
-			Trace.WriteLine("Refreshing. Frame:" + currentFrame.ToString());
+			logger.Print("Refreshing. Frame:" + currentFrame.ToString());
 			var current = moves[currentFrame];
 			for (int y = 0; y < arenaSizeY; y++)
 			{
@@ -317,10 +248,6 @@ namespace PLANET_Proj_1
 
 			stopwatch.Stop();
 			refreshArenaCounter.IncrementBy(stopwatch.ElapsedMilliseconds);
-		}
-		private void NextFrame_Click(object sender, RoutedEventArgs e)
-		{
-			NextFrame();
 		}
 		private bool IsAlive(in int x, in int y)
 		{
@@ -361,6 +288,74 @@ namespace PLANET_Proj_1
 				return "DefaultFile";
 			else
 				return InputFileName.Text;
+		}
+
+		private void arena_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			Point p = Mouse.GetPosition(Arena);
+
+			int x = Convert.ToInt32(p.X) / WIDTH;
+			int y = Convert.ToInt32(p.Y) / HEIGHT;
+
+			FieldClick(x, y);
+
+			logger.Print("pressed: x=" + x.ToString() + " y=" + y.ToString());
+		}
+		private void CreateArena_Click(object sender, RoutedEventArgs e)
+		{
+			SetInputSizeX();
+			SetInputSizeY();
+
+			CreateFields();
+			CreateArena.IsEnabled = false;
+			NextFrameButton.IsEnabled = true;
+			StartButton.IsEnabled = true;
+			LoadButton.IsEnabled = false;
+			SaveButton.IsEnabled = true;
+
+			logger.Print("Created arena. Button IsEnabled=false");
+		}
+		private void NextFrame_Click(object sender, RoutedEventArgs e)
+		{
+			NextFrame();
+		}
+		private void Start_Click(object sender, RoutedEventArgs e)
+		{
+			StartButton.IsEnabled = false;
+			StopButton.IsEnabled = true;
+
+			int timerInterval = 0;
+			if (int.TryParse(InputTimer.Text.ToString(), out timerInterval))
+			{ }
+			else
+				timerInterval = 1000;
+
+			timer.SetInterval(timerInterval);
+			timer.Start();
+		}
+		private void Stop_Click(object sender, RoutedEventArgs e)
+		{
+			StartButton.IsEnabled = true;
+			StopButton.IsEnabled = false;
+
+			timer.Stop();
+		}
+		private void PrevFrame_Click(object sender, RoutedEventArgs e)
+		{
+			if (currentFrame <= 0)
+			{
+				return;
+			}
+			currentFrame--;
+			if (currentFrame <= 0)
+			{
+				PrevFrame.IsEnabled = false;
+			}
+			moves.RemoveAt(moves.Count - 1);
+
+			Born.Content = "";
+			Dead.Content = "";
+			RefreshArena();
 		}
 		private void Save_Click(object sender, RoutedEventArgs e)
 		{
